@@ -11,6 +11,17 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
+  flutter_secure_storage: ^10.0.0
+
+  hcm_core:
+    git:
+      url: https://github.com/hconnectdx/hcm_core.git
+      ref: 0.0.23
+
+  hcm_healthkit:
+    git:
+      url: https://github.com/hconnectdx/hcm_healthkit.git
+      ref: 1.0.19
 
 dev_dependencies:
   flutter_test:

@@ -47,3 +47,8 @@ app.*.map.json
 
 # Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
 /pubspec.lock
+
+# Environment files
+.env.staging
+.env.production
+.env
