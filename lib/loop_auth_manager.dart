@@ -1,18 +1,10 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hcm_core/core/dio/hc_api.dart';
 import 'package:loop_auth_module/api/model/token_response.dart';
+import 'package:loop_auth_module/util/token_storage.dart';
 import 'config/environment.dart';
-
-/// 토큰 발급 타입
-enum GrantType {
-  clientCredentials, // 외부 API 토큰 발급
-  ichmsRopcExternal, // 외부 Client 토큰 발급
-  ichmsRopcInternal, // 내부 Client 토큰 발급
-  ichmsRefreshToken, // 토큰 재발급
-}
 
 class LoopAuthManager {
   static final LoopAuthManager _instance = LoopAuthManager._internal();
@@ -38,43 +30,8 @@ class LoopAuthManager {
     return 'Basic $base64Str';
   }
 
-  /// 외부 API 토큰 발급 (client_credentials)
-  /// clientId와 clientSecret으로 토큰 발급
-  Future<TokenResponse> requestClientCredentialsToken({
-    String? clientId,
-    String? clientSecret,
-  }) async {
-    // 초기화되지 않았으면 초기화
-    if (_authHeader == null || _baseUrl == null) {
-      initialize();
-    }
-
-    // 파라미터로 전달된 경우에만 헤더 재생성
-    String? authHeader = _authHeader;
-    if (clientId != null || clientSecret != null) {
-      final config = Environment.authConfig;
-      final finalClientId = clientId ?? config.clientId;
-      final finalClientSecret = clientSecret ?? config.clientSecret;
-      authHeader = _createBasicAuthHeader(finalClientId, finalClientSecret);
-    }
-
-    final response = await HCApi.post(
-      '$_baseUrl/auth/oauth2/token',
-      data: {'grant_type': 'client_credentials'},
-      headers: {'Authorization': authHeader!},
-      contentType: Headers.formUrlEncodedContentType,
-    );
-
-    final tokenResponse = TokenResponse.fromJson(response.data);
-    await saveTokens(
-      accessToken: tokenResponse.accessToken,
-      refreshToken: tokenResponse.refreshToken,
-    );
-    return tokenResponse;
-  }
-
   /// 외부 Client 토큰 발급 (ichms_ropc_external)
-  /// userTel과 userId(선택)로 토큰 발급
+  /// userTel과 userId로 토큰 발급
   Future<TokenResponse> requestExternalClientToken({
     required String userTel, // E164 표준: 예) +821099991111
     String? userId,
@@ -111,7 +68,7 @@ class LoopAuthManager {
     );
 
     final tokenResponse = TokenResponse.fromJson(response.data);
-    await saveTokens(
+    await TokenStorage.saveTokens(
       accessToken: tokenResponse.accessToken,
       refreshToken: tokenResponse.refreshToken,
     );
@@ -139,7 +96,8 @@ class LoopAuthManager {
       authHeader = _createBasicAuthHeader(finalClientId, finalClientSecret);
     }
 
-    final finalRefreshToken = refreshToken ?? await getRefreshToken();
+    final finalRefreshToken =
+        refreshToken ?? await TokenStorage.getRefreshToken();
 
     if (finalRefreshToken == null) {
       throw Exception('Refresh token is required');
@@ -156,51 +114,11 @@ class LoopAuthManager {
     );
 
     final tokenResponse = TokenResponse.fromJson(response.data);
-    await saveTokens(
+    await TokenStorage.saveTokens(
       accessToken: tokenResponse.accessToken,
       refreshToken: tokenResponse.refreshToken,
     );
     return tokenResponse;
-  }
-
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
-  /// 저장된 토큰 조회
-  /// Returns the stored access token, or null if not found
-  Future<String?> getToken() async {
-    return await _storage.read(key: 'accessToken');
-  }
-
-  /// 액세스 토큰 저장
-  Future<void> setAccessToken(String accessToken) async {
-    await _storage.write(key: 'accessToken', value: accessToken);
-  }
-
-  /// 리프레시 토큰 조회
-  Future<String?> getRefreshToken() async {
-    return await _storage.read(key: 'refreshToken');
-  }
-
-  /// 리프레시 토큰 저장
-  Future<void> setRefreshToken(String refreshToken) async {
-    await _storage.write(key: 'refreshToken', value: refreshToken);
-  }
-
-  /// 토큰 정보 저장 (accessToken과 refreshToken을 함께 저장)
-  Future<void> saveTokens({
-    required String accessToken,
-    String? refreshToken,
-  }) async {
-    await _storage.write(key: 'accessToken', value: accessToken);
-    if (refreshToken != null) {
-      await _storage.write(key: 'refreshToken', value: refreshToken);
-    }
-  }
-
-  /// 모든 토큰 삭제
-  Future<void> clearTokens() async {
-    await _storage.delete(key: 'accessToken');
-    await _storage.delete(key: 'refreshToken');
   }
 
   /// 건강데이터 전송 (샘플 데이터)
@@ -215,7 +133,7 @@ class LoopAuthManager {
     final requestBody = Map<String, dynamic>.from(sampleData);
 
     try {
-      final accessToken = await getToken();
+      final accessToken = await TokenStorage.getAccessToken();
       if (accessToken == null) {
         throw Exception('Access token is required. Please authenticate first.');
       }
@@ -296,7 +214,7 @@ class LoopAuthManager {
     };
 
     try {
-      final accessToken = await getToken();
+      final accessToken = await TokenStorage.getAccessToken();
       if (accessToken == null) {
         throw Exception('Access token is required. Please authenticate first.');
       }
