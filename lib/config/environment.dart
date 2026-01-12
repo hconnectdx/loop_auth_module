@@ -31,9 +31,6 @@ class Environment {
   static bool get isStaging => _currentEnvironment == AuthEnvironment.staging;
 
   /// 현재 환경이 운영인지 확인
-  static bool get isProduction => _currentEnvironment == AuthEnvironment.production;
+  static bool get isProduction =>
+      _currentEnvironment == AuthEnvironment.production;
 }
-
-
-
-

@@ -1,7 +1,65 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hcm_core/core/dio/hc_api.dart';
+import 'config/environment.dart';
+
+/// 토큰 발급 타입
+enum GrantType {
+  clientCredentials, // 외부 API 토큰 발급
+  ichmsRopcExternal, // 외부 Client 토큰 발급
+  ichmsRopcInternal, // 내부 Client 토큰 발급
+  ichmsRefreshToken, // 토큰 재발급
+}
+
+/// 토큰 발급 응답 모델
+class TokenResponse {
+  final String accessToken;
+  final String? refreshToken;
+  final String tokenType;
+  final int expiresIn;
+  final String? scope;
+  final String? clientId;
+  final String? userId;
+  final bool? isUserProfileRegistered;
+  final String? userTimezone;
+  final String? languageSeCd;
+  final String? loginId;
+  final bool? isPasswordChangeRequired;
+
+  TokenResponse({
+    required this.accessToken,
+    this.refreshToken,
+    required this.tokenType,
+    required this.expiresIn,
+    this.scope,
+    this.clientId,
+    this.userId,
+    this.isUserProfileRegistered,
+    this.userTimezone,
+    this.languageSeCd,
+    this.loginId,
+    this.isPasswordChangeRequired,
+  });
+
+  factory TokenResponse.fromJson(Map<String, dynamic> json) {
+    return TokenResponse(
+      accessToken: json['access_token'] as String,
+      refreshToken: json['refresh_token'] as String?,
+      tokenType: json['token_type'] as String? ?? 'Bearer',
+      expiresIn: json['expires_in'] as int? ?? 0,
+      scope: json['scope'] as String?,
+      clientId: json['clientId'] as String?,
+      userId: json['userId'] as String?,
+      isUserProfileRegistered: json['isUserProfileRegistered'] as bool?,
+      userTimezone: json['userTimezone'] as String?,
+      languageSeCd: json['languageSeCd'] as String?,
+      loginId: json['loginId'] as String?,
+      isPasswordChangeRequired: json['isPasswordChangeRequired'] as bool?,
+    );
+  }
+}
 
 class LoopAuthManager {
   static final LoopAuthManager _instance = LoopAuthManager._internal();
@@ -10,29 +68,208 @@ class LoopAuthManager {
 
   LoopAuthManager._internal();
 
-  void printHello() {
-    print('Hello, LoopAuthManager!');
+  String? _authHeader;
+  String? _baseUrl;
+
+  /// 초기화 - 환경 설정에 따라 헤더와 baseUrl을 고정
+  void initialize() {
+    final config = Environment.authConfig;
+    _baseUrl = config.baseUrl;
+    _authHeader = _createBasicAuthHeader(config.clientId, config.clientSecret);
   }
 
-  // 클라이언트 시크릿 넘어 받아서 FlutterSecureStorage에 저장
-  void setClientSecret(String clientSecret) {
-    FlutterSecureStorage().write(key: 'clientSecret', value: clientSecret);
+  /// Basic Authentication 헤더 생성
+  String _createBasicAuthHeader(String clientId, String clientSecret) {
+    final credentials = '$clientId:$clientSecret';
+    final bytes = utf8.encode(credentials);
+    final base64Str = base64Encode(bytes);
+    return 'Basic $base64Str';
   }
 
-  // 토큰 리프레시
-  String refreshToken() {
-    // access token 과 refresh token 을 json string 으로 만들어서 리턴
-    final response = {
-      'accessToken': 'accessToken',
-      'refreshToken': 'refreshToken',
+  /// 외부 API 토큰 발급 (client_credentials)
+  /// clientId와 clientSecret으로 토큰 발급
+  Future<TokenResponse> requestClientCredentialsToken({
+    String? clientId,
+    String? clientSecret,
+  }) async {
+    // 초기화되지 않았으면 초기화
+    if (_authHeader == null || _baseUrl == null) {
+      initialize();
+    }
+
+    // 파라미터로 전달된 경우에만 헤더 재생성
+    String? authHeader = _authHeader;
+    if (clientId != null || clientSecret != null) {
+      final config = Environment.authConfig;
+      final finalClientId = clientId ?? config.clientId;
+      final finalClientSecret = clientSecret ?? config.clientSecret;
+      authHeader = _createBasicAuthHeader(finalClientId, finalClientSecret);
+    }
+
+    final response = await HCApi.dio.post(
+      '$_baseUrl/auth/oauth2/token',
+      data: {'grant_type': 'client_credentials'},
+      options: Options(
+        headers: {'Authorization': authHeader!},
+        contentType: Headers.formUrlEncodedContentType,
+        validateStatus: (status) => status! < 500,
+      ),
+    );
+
+    final tokenResponse = TokenResponse.fromJson(response.data);
+    await saveTokens(
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+    );
+    return tokenResponse;
+  }
+
+  /// 외부 Client 토큰 발급 (ichms_ropc_external)
+  /// userTel과 userId(선택)로 토큰 발급
+  Future<TokenResponse> requestExternalClientToken({
+    required String userTel, // E164 표준: 예) +821099991111
+    String? userId,
+    String? clientId,
+    String? clientSecret,
+  }) async {
+    // 초기화되지 않았으면 초기화
+    if (_authHeader == null || _baseUrl == null) {
+      initialize();
+    }
+
+    // 파라미터로 전달된 경우에만 헤더 재생성
+    String? authHeader = _authHeader;
+    if (clientId != null || clientSecret != null) {
+      final config = Environment.authConfig;
+      final finalClientId = clientId ?? config.clientId;
+      final finalClientSecret = clientSecret ?? config.clientSecret;
+      authHeader = _createBasicAuthHeader(finalClientId, finalClientSecret);
+    }
+
+    final data = <String, dynamic>{
+      'grant_type': 'ichms_ropc_external',
+      'userTel': userTel,
     };
-    return jsonEncode(response);
+    if (userId != null) {
+      data['userId'] = userId;
+    }
+
+    final response = await HCApi.dio.post(
+      '$_baseUrl/auth/oauth2/token',
+      data: data,
+      options: Options(
+        headers: {'Authorization': authHeader!},
+        contentType: Headers.formUrlEncodedContentType,
+        validateStatus: (status) => status! < 500,
+      ),
+    );
+
+    final tokenResponse = TokenResponse.fromJson(response.data);
+    await saveTokens(
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+    );
+    return tokenResponse;
+  }
+
+  /// 토큰 재발급 (ichms_refresh_token)
+  /// refreshToken으로 새로운 토큰 발급
+  Future<TokenResponse> refreshToken({
+    String? refreshToken,
+    String? clientId,
+    String? clientSecret,
+  }) async {
+    // 초기화되지 않았으면 초기화
+    if (_authHeader == null || _baseUrl == null) {
+      initialize();
+    }
+
+    // 파라미터로 전달된 경우에만 헤더 재생성
+    String? authHeader = _authHeader;
+    if (clientId != null || clientSecret != null) {
+      final config = Environment.authConfig;
+      final finalClientId = clientId ?? config.clientId;
+      final finalClientSecret = clientSecret ?? config.clientSecret;
+      authHeader = _createBasicAuthHeader(finalClientId, finalClientSecret);
+    }
+
+    final finalRefreshToken = refreshToken ?? await getRefreshToken();
+
+    if (finalRefreshToken == null) {
+      throw Exception('Refresh token is required');
+    }
+
+    final response = await HCApi.dio.post(
+      '$_baseUrl/auth/oauth2/token',
+      data: {
+        'grant_type': 'ichms_refresh_token',
+        'refreshToken': finalRefreshToken,
+      },
+      options: Options(
+        headers: {'Authorization': authHeader!},
+        contentType: Headers.formUrlEncodedContentType,
+        validateStatus: (status) => status! < 500,
+      ),
+    );
+
+    final tokenResponse = TokenResponse.fromJson(response.data);
+    await saveTokens(
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+    );
+    return tokenResponse;
   }
 
   /// 건강데이터 전송
   void sendHealthData(Map<String, dynamic> healthData) {
     final jsonString = jsonEncode(healthData);
-    // TODO: 실제 API 호출 구현
+    HCApi.dio.post('/health/data', data: jsonString);
+    print('Sending health data: $jsonString');
+  }
+
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  /// 저장된 토큰 조회
+  /// Returns the stored access token, or null if not found
+  Future<String?> getToken() async {
+    return await _storage.read(key: 'accessToken');
+  }
+
+  /// 액세스 토큰 저장
+  Future<void> setAccessToken(String accessToken) async {
+    await _storage.write(key: 'accessToken', value: accessToken);
+  }
+
+  /// 리프레시 토큰 조회
+  Future<String?> getRefreshToken() async {
+    return await _storage.read(key: 'refreshToken');
+  }
+
+  /// 리프레시 토큰 저장
+  Future<void> setRefreshToken(String refreshToken) async {
+    await _storage.write(key: 'refreshToken', value: refreshToken);
+  }
+
+  /// 토큰 정보 저장 (accessToken과 refreshToken을 함께 저장)
+  Future<void> saveTokens({
+    required String accessToken,
+    String? refreshToken,
+  }) async {
+    await _storage.write(key: 'accessToken', value: accessToken);
+    if (refreshToken != null) {
+      await _storage.write(key: 'refreshToken', value: refreshToken);
+    }
+  }
+
+  /// 모든 토큰 삭제
+  Future<void> clearTokens() async {
+    await _storage.delete(key: 'accessToken');
+    await _storage.delete(key: 'refreshToken');
+  }
+
+  /// 건강데이터 전송
+  void sendHealthSampleData() {
+    final jsonString = jsonEncode(sampleData);
     HCApi.dio.post('/health/data', data: jsonString);
     print('Sending health data: $jsonString');
   }
