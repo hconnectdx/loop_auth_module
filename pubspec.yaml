@@ -17,7 +17,7 @@ dependencies:
   hcm_core:
     git:
       url: https://github.com/hconnectdx/hcm_core.git
-      ref: 0.0.23
+      ref: 0.0.24
 
   hcm_healthkit:
     git:
