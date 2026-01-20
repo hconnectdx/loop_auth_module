@@ -27,10 +27,18 @@ class Environment {
     _currentEnvironment = AuthEnvironment.production;
   }
 
+  /// 개발 환경으로 설정
+  static void setDev() {
+    _currentEnvironment = AuthEnvironment.dev;
+  }
+
   /// 현재 환경이 스테이징인지 확인
   static bool get isStaging => _currentEnvironment == AuthEnvironment.staging;
 
   /// 현재 환경이 운영인지 확인
   static bool get isProduction =>
       _currentEnvironment == AuthEnvironment.production;
+
+  /// 현재 환경이 개발인지 확인
+  static bool get isDev => _currentEnvironment == AuthEnvironment.dev;
 }

@@ -5,6 +5,7 @@ import 'package:hcm_core/core/dio/hc_api.dart';
 import 'package:loop_auth_module/api/model/token_response.dart';
 import 'package:loop_auth_module/util/token_storage.dart';
 import 'config/environment.dart';
+import 'config/auth_config.dart';
 
 class LoopAuthManager {
   static final LoopAuthManager _instance = LoopAuthManager._internal();
@@ -15,7 +16,14 @@ class LoopAuthManager {
   String? _baseUrl;
 
   /// 초기화 - 환경 설정에 따라 헤더와 baseUrl을 고정
-  void initialize() {
+  /// [env]를 지정하면 해당 환경으로 설정하고 초기화합니다.
+  /// [env]를 지정하지 않으면 현재 Environment 설정을 사용합니다.
+  void initialize({AuthEnvironment? env}) {
+    // 환경이 지정된 경우 Environment 설정
+    if (env != null) {
+      Environment.setEnvironment(env);
+    }
+
     final config = Environment.authConfig;
     _baseUrl = config.baseUrl;
     _authHeader = _createBasicAuthHeader(config.clientId, config.clientSecret);
