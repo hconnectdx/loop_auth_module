@@ -76,7 +76,7 @@ class LoopAuthManager {
     );
 
     final tokenResponse = TokenResponse.fromJson(response.data);
-    await TokenStorage.saveTokens(
+    await MyTokenStorage.saveTokens(
       accessToken: tokenResponse.accessToken,
       refreshToken: tokenResponse.refreshToken,
     );
@@ -105,7 +105,7 @@ class LoopAuthManager {
     }
 
     final finalRefreshToken =
-        refreshToken ?? await TokenStorage.getRefreshToken();
+        refreshToken ?? await MyTokenStorage.getRefreshToken();
 
     if (finalRefreshToken == null) {
       throw Exception('Refresh token is required');
@@ -122,7 +122,7 @@ class LoopAuthManager {
     );
 
     final tokenResponse = TokenResponse.fromJson(response.data);
-    await TokenStorage.saveTokens(
+    await MyTokenStorage.saveTokens(
       accessToken: tokenResponse.accessToken,
       refreshToken: tokenResponse.refreshToken,
     );

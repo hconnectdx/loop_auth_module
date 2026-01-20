@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// FlutterSecureStorage를 사용한 토큰 저장/조회 유틸리티 클래스
-class TokenStorage {
+class MyTokenStorage {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   /// 저장된 액세스 토큰 조회
