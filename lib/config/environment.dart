@@ -17,6 +17,11 @@ class Environment {
     return AuthConfig.getCurrentConfig(_currentEnvironment);
   }
 
+  /// 현재 환경에 따른 baseUrl 반환
+  static String getBaseUrl() {
+    return authConfig.baseUrl;
+  }
+
   /// 스테이징 환경으로 설정
   static void setStaging() {
     _currentEnvironment = AuthEnvironment.staging;
