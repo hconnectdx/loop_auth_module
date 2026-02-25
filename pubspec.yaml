@@ -19,10 +19,10 @@ dependencies:
       url: https://github.com/hconnectdx/hcm_core.git
       ref: 0.0.24
 
-  hcm_healthkit:
-    git:
-      url: https://github.com/hconnectdx/hcm_healthkit.git
-      ref: 1.0.22
+  # hcm_healthkit:
+  #   git:
+  #     url: https://github.com/hconnectdx/hcm_healthkit.git
+  #     ref: 1.0.22
 
 dev_dependencies:
   flutter_test:

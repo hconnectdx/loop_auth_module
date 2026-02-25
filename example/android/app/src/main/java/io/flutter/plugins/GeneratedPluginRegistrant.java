@@ -31,11 +31,6 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin hcm_core, kr.co.hconnect.hcm_core.HcmCorePlugin", e);
     }
     try {
-      flutterEngine.getPlugins().add(new kr.co.hconnect.hcm_healthkit.hcm_healthkit.HcmHealthkitPlugin());
-    } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin hcm_healthkit, kr.co.hconnect.hcm_healthkit.hcm_healthkit.HcmHealthkitPlugin", e);
-    }
-    try {
       flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin integration_test, dev.flutter.plugins.integration_test.IntegrationTestPlugin", e);
