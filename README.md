@@ -48,8 +48,9 @@ void main() {
 ```
 
 **환경 설정:**
-- `Environment.setStaging()`: 스테이징 서버 (`https://stg.ichms.ai`)
-- `Environment.setProduction()`: 운영 서버 (`https://ichms.ai`)
+- `Environment.setDev()`: 개발 서버 (`https://dev-ichms.invitesloop.com`)
+- `Environment.setStaging()`: 스테이징 서버 (`https://stg-ichms.invitesloop.com`)
+- `Environment.setProduction()`: 운영 서버 (`https://ichms.invitesloop.com`)
 
 ### 2. 외부 클라이언트 토큰 발급
 

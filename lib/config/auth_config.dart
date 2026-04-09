@@ -22,7 +22,7 @@ class AuthConfig {
       environment: AuthEnvironment.dev,
       clientId: Env.devClientId,
       clientSecret: Env.devClientSecret,
-      baseUrl: 'https://dev.ichms.ai',
+      baseUrl: 'https://dev-ichms.invitesloop.com',
     );
   }
 
@@ -32,7 +32,7 @@ class AuthConfig {
       environment: AuthEnvironment.staging,
       clientId: Env.stagingClientId,
       clientSecret: Env.stagingClientSecret,
-      baseUrl: 'https://stg.ichms.ai',
+      baseUrl: 'https://stg-ichms.invitesloop.com',
     );
   }
 
@@ -42,7 +42,7 @@ class AuthConfig {
       environment: AuthEnvironment.production,
       clientId: Env.productionClientId,
       clientSecret: Env.productionClientSecret,
-      baseUrl: 'https://ichms.ai',
+      baseUrl: 'https://ichms.invitesloop.com',
     );
   }
 
